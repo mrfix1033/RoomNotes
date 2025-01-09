@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">RoomNotes</string>
+    <string name="name">Имя</string>
+    <string name="surname">Фамилия</string>
+    <string name="add">Добавить</string>
+    <string name="phone_number">Номер телефона</string>
+    <string name="all_fields_must_be_filled">Все поля должны быть заполнены</string>
+    <string name="exit">Выход</string>
+</resources>
