@@ -10,18 +10,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import ru.mrfix1033.roomnotes.database.MyDatabase
-import ru.mrfix1033.roomnotes.database.Person
+import ru.mrfix1033.roomnotes.database.Contact
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var contactViewModel: ContactViewModel
     private lateinit var recyclerViewAdapter: RecyclerViewAdapter
-    private val persons = mutableListOf<Person>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,9 +34,6 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val database = MyDatabase.getInstance(this)
-        readDatabase(database)
-
         setSupportActionBar(findViewById(R.id.toolbar))
 
         val editTextName: EditText = findViewById(R.id.editTextName)
@@ -43,7 +41,17 @@ class MainActivity : AppCompatActivity() {
         val editTextPhoneNumber: EditText = findViewById(R.id.editTextPhoneNumber)
         val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
 
-        recyclerViewAdapter = RecyclerViewAdapter(persons)
+        contactViewModel = ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(application))[ContactViewModel::class.java]
+        contactViewModel.contacts.observe(this) {list ->
+            recyclerViewAdapter.updateList(list)
+        }
+
+        val dateFormatter = SimpleDateFormat("HH:mm dd.MM.yyyy", Locale.ROOT)
+        dateFormatter.timeZone = TimeZone.getTimeZone("GMT+3")
+
+        recyclerViewAdapter = RecyclerViewAdapter(dateFormatter) { contact ->
+            contactViewModel.deleteContact(contact)
+        }
         recyclerView.adapter = recyclerViewAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -59,25 +67,13 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val person = Person(name, surname, phoneNumber)
-            addPerson(database, person)
-            persons.add(person)
-            recyclerViewAdapter.notifyItemInserted(persons.size - 1)
+            val person = Contact(name, surname, phoneNumber, Date().time)
+            contactViewModel.insertContact(person)
 
             editTextName.text.clear()
             editTextSurname.text.clear()
             editTextPhoneNumber.text.clear()
         }
-    }
-
-    private fun addPerson(db: MyDatabase, person: Person) = CoroutineScope(Dispatchers.IO).launch {
-        db.getPersonDao().insert(person)
-    }
-
-    private fun readDatabase(db: MyDatabase) = CoroutineScope(Dispatchers.IO).launch {
-        persons.clear()
-        persons.addAll(db.getPersonDao().getAllPersons())
-        recyclerViewAdapter.notifyDataSetChanged()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
